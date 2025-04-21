@@ -1,7 +1,7 @@
 default: build/main
 
 CC=clang
-CFLAGS=-Wall -Wextra -pedantic -I./src/include/
+CFLAGS=-Wall -Wextra -pedantic -I./src/include/ -g
 
 RAYLIB_H=./raylib-5.5_linux_amd64/include
 RAYLIB=-I$(RAYLIB_H) -L./raylib-5.5_linux_amd64/lib -l:libraylib.a -lm 
