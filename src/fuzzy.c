@@ -1,7 +1,10 @@
+#include <math.h>
+
 #include "fuzzy.h"
 
 double func_x(double value, double offset) { return value + offset; }
 double func_x_mirror(double value, double offset) { return -value - offset; }
+double func_parabolica(double value, double offset) { return -pow(value - offset, 2) + 1; }
 double func_zero(double value, double offset)
 {
     (void)value;
@@ -13,6 +16,11 @@ double func_one(double value, double offset)
     (void)value;
     (void)offset;
     return 1.0;
+}
+double func_unit_gaussian(double value, double offset)
+{
+    // \sigma == 1
+    return pow(M_E, -pow(value - offset, 2) / 4);
 }
 double func_unit_triangle(double value, double offset)
 {
@@ -30,6 +38,16 @@ double func_unit_trapezoid(double value, double offset)
         return 1.0;
     } else {
         return func_x(-value, offset + 2.0);
+    }
+}
+double func_trapezoid_5(double value, double offset)
+{
+    if (value < offset) {
+        return func_x(value, -(offset - 1.0));
+    } else if (value < offset + 5.0) {
+        return 1.0;
+    } else {
+        return func_x(-value, offset + 6.0);
     }
 }
 

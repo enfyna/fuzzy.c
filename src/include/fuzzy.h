@@ -32,5 +32,8 @@ double func_one(double value, double offset);
 double func_zero(double value, double offset);
 double func_x(double value, double offset);
 double func_x_mirror(double value, double offset);
+double func_parabolica(double value, double offset);
 double func_unit_triangle(double value, double offset);
 double func_unit_trapezoid(double value, double offset);
+double func_unit_gaussian(double value, double offset);
+double func_trapezoid_5(double value, double offset);
