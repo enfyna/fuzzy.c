@@ -5,17 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "data.h"
-#include "fuzzy.h"
-
-void rule_forward(memberships ms, fuzzy* fz, Rule* rule, double value)
-{
-    (void)ms;
-    (void)fz;
-    (void)rule;
-    (void)value;
-    assert(false && "[ERROR] NOT IMPLEMENTED");
-}
+#include "csv.h"
 
 #define LINE_SIZE 1024
 
