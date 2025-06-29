@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "fuzzy.h"
+#include "helper.h"
 
 double norm(double min, double max, double val)
 {
@@ -94,23 +95,19 @@ double mf_trapezoid_5(double value, double offset)
     }
 }
 
-double mf_forward(MF g, double value)
+// https://www.mathworks.com/help/fuzzy/trapezoidalmf.html
+double mf_trapmf(MF mf, double value)
 {
-    double val = g.mf(value, g.offset);
-    if (val > 1.0)
-        return 1.0;
-    if (val < 0.0)
-        return 0.0;
-    return val;
+    assert(mf.args_count == 4);
+    double a = mf.args[0];
+    double b = mf.args[1];
+    double c = mf.args[2];
+    double d = mf.args[3];
+    double val = fmin(mf.weight, fmin((d - value) / (d - c), (value - a) / (b - a)));
+    return val > 0 ? val : 0;
 }
-
-double mf_forward_v2(MF2 mf, double value)
-{
-    double val = mf.mf(mf, value);
-    return val;
-}
-
-double mf_trimf(MF2 mf, double value)
+// https://www.mathworks.com/help/fuzzy/triangularmf.html
+double mf_trimf(MF mf, double value)
 {
     assert(mf.args_count == 3);
     double a = mf.args[0];
@@ -119,22 +116,23 @@ double mf_trimf(MF2 mf, double value)
     if (value < a) {
         return 0;
     } else if (value < b) {
-        return (value - a) / (b - a);
+        return fmin(mf.weight, (value - a) / (b - a));
     } else if (value < c) {
-        return (c - value) / (c - b);
+        return fmin(mf.weight, (c - value) / (c - b));
     } else {
         return 0;
     }
 }
 
-double mf_gauss(MF2 mf, double value)
+// https://www.mathworks.com/help/fuzzy/gaussianmf.html
+double mf_gauss(MF mf, double value)
 {
     assert(mf.args_count == 2);
     double c = mf.args[0];
     double s = mf.args[1];
     double s2 = pow(s, 2);
     double t = -pow(value - c, 2);
-    return pow(M_E, t / (2 * s2));
+    return fmin(mf.weight, pow(M_E, t / (2 * s2)));
 }
 
 Fuzzy* fuzzy_alloc_null(size_t class_count, double bound_min, double bound_max, ...)
@@ -155,10 +153,33 @@ Fuzzy* fuzzy_alloc_null(size_t class_count, double bound_min, double bound_max, 
     va_start(ap, bound_max);
 
     while ((f = va_arg(ap, mf))) {
-        double offset = va_arg(ap, double);
         assert(count < class_count);
-        fz->mfs[count].mf = f;
-        fz->mfs[count].offset = norm(bound_min, bound_max, offset);
+        fz->mfs[count].forward = f;
+        fz->mfs[count].weight = 1.0;
+        if (f == mf_trimf) {
+            fz->mfs[count].args_count = 3;
+            fz->mfs[count].args[0] = va_arg(ap, double);
+            fz->mfs[count].args[1] = va_arg(ap, double);
+            fz->mfs[count].args[2] = va_arg(ap, double);
+            assert(fz->mfs[count].args[1] >= bound_min);
+            assert(fz->mfs[count].args[1] <= bound_max);
+        } else if (f == mf_trapmf) {
+            fz->mfs[count].args_count = 4;
+            fz->mfs[count].args[0] = va_arg(ap, double);
+            fz->mfs[count].args[1] = va_arg(ap, double);
+            fz->mfs[count].args[2] = va_arg(ap, double);
+            fz->mfs[count].args[3] = va_arg(ap, double);
+            // assert(fz->mfs[count].args[0] >= bound_min);
+            // assert(fz->mfs[count].args[0] <= bound_max);
+        } else if (f == mf_gauss) {
+            fz->mfs[count].args_count = 2;
+            fz->mfs[count].args[0] = va_arg(ap, double);
+            fz->mfs[count].args[1] = va_arg(ap, double);
+            // assert(fz->mfs[count].args[0] >= bound_min);
+            // assert(fz->mfs[count].args[0] <= bound_max);
+        } else {
+            assert(false && "Invalid MF");
+        }
         count++;
     }
 
@@ -172,11 +193,46 @@ Fuzzy* fuzzy_alloc_null(size_t class_count, double bound_min, double bound_max, 
 void fuzzy_forward(Array dest, Fuzzy* fz, double value)
 {
     assert(dest.count == fz->count);
-    // double max = fz->bounds[1];
-    // double min = fz->bounds[0];
     for (size_t i = 0; i < fz->count; i++) {
-        dest.items[i] = mf_forward(fz->mfs[i], norm(fz->bounds[0], fz->bounds[1], value));
+        dest.items[i] = mf_forward(fz->mfs[i], value);
     }
+}
+
+double fuzzy_defuzzify(Fuzzy* fz, Array weights)
+{
+    double result_top = 0;
+    double result_bot = 0;
+    assert(fz->count == weights.count);
+
+    for (size_t i = 0; i < fz->count; i++) {
+        fz->mfs[i].weight = weights.items[i];
+    }
+
+    Array dest = { 0 };
+    dest.count = fz->count;
+    dest.items = calloc(fz->count, sizeof(double));
+
+    double point_pos = 0.0;
+    for (size_t i = 0; i < 1000; i++) {
+        double normal = lerpf(fz->bounds[0], fz->bounds[1], point_pos);
+        fuzzy_forward(dest, fz, normal);
+        double m = 0.0;
+        for (size_t j = 0; j < dest.count; j++) {
+            m = fmax(m, dest.items[j]);
+        }
+        if (m != 0.0) {
+            result_top += (m * point_pos);
+            result_bot += m;
+        }
+        point_pos += 0.001;
+    }
+
+    for (size_t i = 0; i < fz->count; i++) {
+        fz->mfs[i].weight = 1.0;
+    }
+
+    double result = lerpf(fz->bounds[0], fz->bounds[1], result_top / result_bot);
+    return result;
 }
 
 Rule* rule_alloc(size_t lit_count, ...)
@@ -200,8 +256,6 @@ Rule* rule_alloc(size_t lit_count, ...)
             assert(op == R_EQUALS
                 && "[ERROR] Before last rule op must be R_EQUALS!");
         } else {
-            // assert(op != R_OR
-            // && "[ERROR] R_OR IS NOT IMPLEMENTED!");
             assert(op != R_EQUALS
                 && "[ERROR] R_EQUALS must be used only before the last op!");
             assert(op != R_STOP
@@ -224,9 +278,8 @@ Rule* rule_alloc(size_t lit_count, ...)
 
 void rule_forward(Array dest, Array* ms, Rule* rule[], size_t rule_count)
 {
-    for (size_t i = 0; i < dest.count; i++) {
-        dest.items[i] = 0;
-    }
+    memset(dest.items, 0, sizeof(double) * dest.count);
+
     printf("\n");
     for (size_t i = 0; i < rule_count; i++) {
         Rule* rl = rule[i];
@@ -239,19 +292,17 @@ void rule_forward(Array dest, Array* ms, Rule* rule[], size_t rule_count)
             size_t data_id = rl->lits[j].data_idx;
             size_t data_class = rl->lits[j].data_class;
             size_t op = rl->lits[j].op;
-            if (j > 0) {
-                if (current_op == R_AND && ms[data_id].items[data_class] < act) {
-                    act = ms[data_id].items[data_class];
-                } else if (current_op == R_OR && ms[data_id].items[data_class] > act) {
-                    act = ms[data_id].items[data_class];
-                }
-            } else {
+            if (j == 0) {
+                act = ms[data_id].items[data_class];
+            } else if (current_op == R_AND && ms[data_id].items[data_class] < act) {
+                act = ms[data_id].items[data_class];
+            } else if (current_op == R_OR && ms[data_id].items[data_class] > act) {
                 act = ms[data_id].items[data_class];
             }
             current_op = op;
             printf("%zu %s (%.2f) %s ", data_id, rule_class_cstr[data_class], ms[data_id].items[data_class], rule_op_cstr[op]);
         }
-        dest.items[rl->expected[0].data_class] += act;
+        dest.items[rl->expected[0].data_class] = fmax(dest.items[rl->expected[0].data_class], act);
         printf("%zu %s (%.2f)\n", rl->expected[0].data_idx, rule_class_cstr[rl->expected[0].data_class], act);
     }
     printf("=============\n");
