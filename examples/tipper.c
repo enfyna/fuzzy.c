@@ -8,7 +8,6 @@
 #include <string.h>
 
 #include "helper.h"
-#include "layout.h"
 #include "raylib.h"
 
 #include "csv.h"
@@ -227,22 +226,17 @@ int main(void)
         double delta = GetFrameTime();
         Vector2 mpos = GetMousePosition();
 
-        LayoutBox root = (LayoutBox) {
-            .x = 0,
-            .y = 0,
-            .width = GetScreenWidth(),
-            .height = GetScreenHeight(),
-        };
-        LayoutBox left = layout_row(root, 2, 0);
-        LayoutBox right = layout_row(root, 2, 1);
-
         for (size_t i = 0; i < glist_count; i++) {
             Graph* gp = glist[i];
 
             if (gp == &g) {
-                gp->bound = layout_pad(left, 4);
+                gp->bound = (Rectangle) {
+                    10, 10, (GetScreenWidth() / 2.0) - 20, GetScreenHeight() - 20
+                };
             } else if (gp == &gm) {
-                gp->bound = layout_pad(right, 4);
+                gp->bound = (Rectangle) {
+                    GetScreenWidth() / 2.0 + 10, 10, GetScreenWidth() / 2.0 - 20, GetScreenHeight() - 20
+                };
             }
 
             graph_update(gp, mpos, delta);
