@@ -15,6 +15,7 @@ typedef struct MF {
     double weight;
     size_t args_count;
     double args[MF_MAX_ARGS];
+    const char* name;
 } MF;
 
 #define mf_forward(mf, value) (mf).forward((mf), value)
@@ -33,9 +34,9 @@ typedef struct {
 double norm(double min, double max, double val);
 double denorm(double min, double max, double val);
 
-#define fz_gauss(c, s) (mf) mf_gauss, (double)c, (double)s
-#define fz_trimf(a, b, c) (mf) mf_trimf, (double)a, (double)b, (double)c
-#define fz_trapmf(a, b, c, d) (mf) mf_trapmf, (double)a, (double)b, (double)c, (double)d
+#define fz_gauss(name, c, s) (mf) mf_gauss, name, (double)c, (double)s
+#define fz_trimf(name, a, b, c) (mf) mf_trimf, name, (double)a, (double)b, (double)c
+#define fz_trapmf(name, a, b, c, d) (mf) mf_trapmf, name, (double)a, (double)b, (double)c, (double)d
 #define fuzzy_alloc(class_count, start, end, ...) \
     fuzzy_alloc_null((size_t)class_count, (double)start, (double)end, __VA_ARGS__, NULL)
 
@@ -66,11 +67,11 @@ enum RuleOp {
 };
 
 enum RuleClass {
-    R_VERY_LOW,
-    R_LOW,
-    R_MED,
-    R_HIGH,
-    R_VERY_HIGH,
+    R_0,
+    R_1,
+    R_2,
+    R_3,
+    R_4,
 };
 
 static const char* rule_op_cstr[] = {
@@ -78,14 +79,6 @@ static const char* rule_op_cstr[] = {
     "&",
     "|",
     ".",
-};
-
-static const char* rule_class_cstr[] = {
-    "VeryLow",
-    "Low",
-    "Med",
-    "High",
-    "VeryHigh",
 };
 
 typedef struct {
@@ -104,4 +97,4 @@ typedef struct {
     (size_t)data_class, (size_t)data_id, (size_t)op
 
 Rule* rule_alloc(size_t lit_count, ...);
-void rule_forward(Array dest, Array* ms, Rule* rule[], size_t rule_count);
+void rule_forward(Array dest, Fuzzy* fs[], Array* ms, Rule* rule[], size_t rule_count);

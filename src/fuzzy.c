@@ -30,6 +30,7 @@ double mf_trapmf(MF mf, double value)
     double val = fmin(mf.weight, fmin((d - value) / (d - c), (value - a) / (b - a)));
     return val > 0 ? val : 0;
 }
+
 // https://www.mathworks.com/help/fuzzy/triangularmf.html
 double mf_trimf(MF mf, double value)
 {
@@ -56,7 +57,7 @@ double mf_gauss(MF mf, double value)
     double s = mf.args[1];
     double s2 = pow(s, 2);
     double t = -pow(value - c, 2);
-    return fmin(mf.weight, pow(M_E, t / (2 * s2)));
+    return fmin(mf.weight, exp(t / (2 * s2)));
 }
 
 Fuzzy* fuzzy_alloc_null(size_t class_count, double bound_min, double bound_max, ...)
@@ -80,29 +81,24 @@ Fuzzy* fuzzy_alloc_null(size_t class_count, double bound_min, double bound_max, 
         assert(count < class_count);
         fz->mfs[count].forward = f;
         fz->mfs[count].weight = 1.0;
+        fz->mfs[count].name = va_arg(ap, const char*);
         if (f == mf_trimf) {
             fz->mfs[count].args_count = 3;
             fz->mfs[count].args[0] = va_arg(ap, double);
             fz->mfs[count].args[1] = va_arg(ap, double);
             fz->mfs[count].args[2] = va_arg(ap, double);
-            assert(fz->mfs[count].args[1] >= bound_min);
-            assert(fz->mfs[count].args[1] <= bound_max);
         } else if (f == mf_trapmf) {
             fz->mfs[count].args_count = 4;
             fz->mfs[count].args[0] = va_arg(ap, double);
             fz->mfs[count].args[1] = va_arg(ap, double);
             fz->mfs[count].args[2] = va_arg(ap, double);
             fz->mfs[count].args[3] = va_arg(ap, double);
-            // assert(fz->mfs[count].args[0] >= bound_min);
-            // assert(fz->mfs[count].args[0] <= bound_max);
         } else if (f == mf_gauss) {
             fz->mfs[count].args_count = 2;
             fz->mfs[count].args[0] = va_arg(ap, double);
             fz->mfs[count].args[1] = va_arg(ap, double);
-            // assert(fz->mfs[count].args[0] >= bound_min);
-            // assert(fz->mfs[count].args[0] <= bound_max);
         } else {
-            assert(false && "Invalid MF");
+            assert(false && "MF type undefined!");
         }
         count++;
     }
@@ -200,7 +196,7 @@ Rule* rule_alloc(size_t lit_count, ...)
     return rule;
 }
 
-void rule_forward(Array dest, Array* ms, Rule* rule[], size_t rule_count)
+void rule_forward(Array dest, Fuzzy* fs[], Array* ms, Rule* rule[], size_t rule_count)
 {
     memset(dest.items, 0, sizeof(double) * dest.count);
 
@@ -224,10 +220,10 @@ void rule_forward(Array dest, Array* ms, Rule* rule[], size_t rule_count)
                 act = ms[data_id].items[data_class];
             }
             current_op = op;
-            printf("%zu %s (%.2f) %s ", data_id, rule_class_cstr[data_class], ms[data_id].items[data_class], rule_op_cstr[op]);
+            printf("%zu %s (%.2f) %s ", data_id, fs[data_id]->mfs[data_class].name, ms[data_id].items[data_class], rule_op_cstr[op]);
         }
         dest.items[rl->expected[0].data_class] = fmax(dest.items[rl->expected[0].data_class], act);
-        printf("%zu %s (%.2f)\n", rl->expected[0].data_idx, rule_class_cstr[rl->expected[0].data_class], act);
+        printf("%zu %s (%.2f)\n", rl->expected[0].data_idx, fs[rl->expected[0].data_idx]->mfs[rl->expected[0].data_class].name, act);
     }
     printf("=============\n");
 }

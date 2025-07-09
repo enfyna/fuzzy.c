@@ -19,23 +19,15 @@
 #define data_food 1
 #define data_tip 2
 
-const char* title[] = {
-    "Low %s",
-    "Med %s",
-    "High %s",
-};
 Color colors[] = {
     GREEN,
     ORANGE,
     RED,
 };
-size_t title_count = sizeof title / sizeof title[0];
 size_t color_count = sizeof colors / sizeof colors[0];
-size_t class_count = sizeof title / sizeof title[0];
 
 int main(void)
 {
-    assert(title_count == color_count);
 
     enum { read_data = 3 };
     Csv* csv = csv_alloc_read_file_until("res/tipper.csv", read_data);
@@ -43,42 +35,42 @@ int main(void)
 
     Rule* rules[] = {
         rule_alloc(3,
-            rule_lit(R_VERY_LOW, data_service, R_OR),
-            rule_lit(R_VERY_LOW, data_food, R_EQUALS),
-            rule_lit(R_VERY_LOW, data_tip, R_STOP)),
+            rule_lit(R_0, data_service, R_OR),
+            rule_lit(R_0, data_food, R_EQUALS),
+            rule_lit(R_0, data_tip, R_STOP)),
         rule_alloc(2,
-            rule_lit(R_LOW, data_service, R_EQUALS),
-            rule_lit(R_LOW, data_tip, R_STOP)),
+            rule_lit(R_1, data_service, R_EQUALS),
+            rule_lit(R_1, data_tip, R_STOP)),
         rule_alloc(3,
-            rule_lit(R_MED, data_service, R_OR),
-            rule_lit(R_LOW, data_food, R_EQUALS),
-            rule_lit(R_MED, data_tip, R_STOP)),
+            rule_lit(R_2, data_service, R_OR),
+            rule_lit(R_1, data_food, R_EQUALS),
+            rule_lit(R_2, data_tip, R_STOP)),
     };
     enum { rules_count = sizeof rules / sizeof rules[0] };
 
     Fuzzy* fs[] = {
         // service
         fuzzy_alloc(3, 0, 10,
-            fz_gauss(0, 2),
-            fz_gauss(5, 2),
-            fz_gauss(10, 2)),
+            fz_gauss("bad", 0, 2),
+            fz_gauss("med", 5, 2),
+            fz_gauss("good", 10, 2)),
         // food
         fuzzy_alloc(2, 0, 10,
-            fz_trapmf(0, 0, 1, 3),
-            fz_trapmf(7, 9, 10, 10)),
+            fz_trapmf("terrible", 0, 0, 1, 3),
+            fz_trapmf("delicious", 7, 9, 10, 10)),
         // tip
         fuzzy_alloc(3, 0, 30,
-            fz_trimf(0, 5, 10),
-            fz_trimf(10, 15, 20),
-            fz_trimf(20, 25, 30))
+            fz_trimf("low", 0, 5, 10),
+            fz_trimf("med", 10, 15, 20),
+            fz_trimf("high", 20, 25, 30))
     };
     enum { fs_count = sizeof fs / sizeof fs[0] };
 
     // Memberships
     Array ms[fs_count];
     for (size_t i = 0; i < fs_count; i++) {
-        ms[i].count = class_count + 1;
-        ms[i].items = malloc(sizeof(double) * (class_count + 1));
+        ms[i].count = fs[fs_count - 1]->count + 1;
+        ms[i].items = malloc(sizeof(double) * (fs[fs_count - 1]->count + 1));
     }
 
     Array res[read_data];
@@ -95,7 +87,14 @@ int main(void)
 
     for (size_t line = 0; line < read_data; line++) { // change 1 to  csv->data_count
         printf("forwarding for data %zu:\n", line + 1);
-        for (size_t class = 0; class < class_count - 1; class++) {
+
+        printf("data %zu: ", line + 1);
+        for (size_t i = 0; i < fs_count - 1; i++) {
+            printf(" %s(%.2f), ", csv->titles[i], csv->datas[line][i]);
+        }
+        printf("\n");
+
+        for (size_t class = 0; class < fs[fs_count - 1]->count; class++) {
             ms[class].count = fs[class]->count;
             fuzzy_forward(ms[class], fs[class], csv->datas[line][class]);
 
@@ -106,7 +105,7 @@ int main(void)
             printf("\n");
         }
 
-        rule_forward(res[line], ms, rules, rules_count);
+        rule_forward(res[line], fs, ms, rules, rules_count);
 
         double defuzz = fuzzy_defuzzify(fs[data_tip], res[line]);
         results[line] = defuzz;
@@ -148,16 +147,13 @@ int main(void)
     gm.show_legend = false;
 
     for (size_t i = 0; i < fs_count; i++) {
-        assert(fs[i]->count <= title_count
-            && "[ERROR] Add new title and color!");
-
         Line* buf_line[fs[i]->count];
 
         int line_point_count = 101;
 
         char buf[256] = { 0 };
         for (size_t j = 0; j < fs[i]->count; j++) {
-            snprintf(buf, 256, title[j], csv->titles[i]);
+            snprintf(buf, 256, "%s:%s", csv->titles[i], fs[i]->mfs[j].name);
             buf_line[j] = line_alloc(&g, line_point_count, strdup(buf), colors[j]);
         }
 
@@ -183,16 +179,16 @@ int main(void)
         Line* a = line_alloc(&gm, line_point_count, "Actual", GREEN);
         for (size_t i = 0; i < fs[data_tip]->count; i++) {
             char buf[256] = { 0 };
-            snprintf(buf, 256, title[i], csv->titles[i]);
-            Line* l = line_alloc(&gm, line_point_count, buf, colors[i]);
+            snprintf(buf, 256, "%s:%s", csv->titles[data_tip], fs[data_tip]->mfs[i].name);
+            Line* l = line_alloc(&gm, line_point_count, strdup(buf), colors[i]);
 
             double point_pos = 0;
             fs[data_tip]->mfs[i].weight = res[line].items[i];
             for (size_t j = 0; j < line_point_count; j++) {
                 double p = mf_forward(fs[data_tip]->mfs[i], lerpf(fs[data_tip]->bounds[0], fs[data_tip]->bounds[1], point_pos));
                 l->points[j] = (Vector2) { .x = point_pos + line, .y = p };
-                double res = (results[line] - fs[data_tip]->bounds[0]) / (fs[data_tip]->bounds[1] - fs[data_tip]->bounds[0]);
-                double actual = (csv->datas[line][data_tip] - fs[data_tip]->bounds[0]) / (fs[data_tip]->bounds[1] - fs[data_tip]->bounds[0]);
+                double res = norm(fs[data_tip]->bounds[0], fs[data_tip]->bounds[1], results[line]);
+                double actual = norm(fs[data_tip]->bounds[0], fs[data_tip]->bounds[1], csv->datas[line][data_tip]);
                 r->points[j] = (Vector2) { .x = res + line, .y = 2 * point_pos - 0.2 };
                 a->points[j] = (Vector2) { .x = actual + line, .y = 2 * point_pos - 0.2 };
                 point_pos += 0.01;
