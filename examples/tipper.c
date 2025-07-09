@@ -34,16 +34,16 @@ int main(void)
 
     Rule* rules[] = {
         rule_alloc(3,
-            rule_lit(R_0, data_service, R_OR),
-            rule_lit(R_0, data_food, R_EQUALS),
-            rule_lit(R_0, data_tip, R_STOP)),
+            rule_lit(0, data_service, R_OR),
+            rule_lit(0, data_food, R_EQUALS),
+            rule_lit(0, data_tip, R_STOP)),
         rule_alloc(2,
-            rule_lit(R_1, data_service, R_EQUALS),
-            rule_lit(R_1, data_tip, R_STOP)),
+            rule_lit(1, data_service, R_EQUALS),
+            rule_lit(1, data_tip, R_STOP)),
         rule_alloc(3,
-            rule_lit(R_2, data_service, R_OR),
-            rule_lit(R_1, data_food, R_EQUALS),
-            rule_lit(R_2, data_tip, R_STOP)),
+            rule_lit(2, data_service, R_OR),
+            rule_lit(1, data_food, R_EQUALS),
+            rule_lit(2, data_tip, R_STOP)),
     };
     enum { rules_count = sizeof rules / sizeof rules[0] };
 

@@ -132,7 +132,7 @@ double fuzzy_defuzzify(Fuzzy* fz, Array weights)
     dest.count = fz->count;
     dest.items = calloc(fz->count, sizeof(double));
 
-    double point_pos = 0.0;
+    double point_pos = 0.0; // riemann sum
     for (size_t i = 0; i < 1000; i++) {
         double normal = lerpf(fz->bounds[0], fz->bounds[1], point_pos);
         fuzzy_forward(dest, fz, normal);
@@ -166,8 +166,8 @@ Rule* rule_alloc(size_t lit_count, ...)
 
     va_start(ap, lit_count);
     for (size_t count = 0; count < lit_count; count++) {
+        size_t data_cluster = va_arg(ap, size_t);
         size_t data_class = va_arg(ap, size_t);
-        size_t data_id = va_arg(ap, size_t);
         size_t op = va_arg(ap, size_t);
         if (count == lit_count - 1) {
             assert(op == R_STOP
@@ -182,12 +182,12 @@ Rule* rule_alloc(size_t lit_count, ...)
                 && "[ERROR] R_STOP must be used only as the last op!");
         }
         if (count == lit_count - 1) {
-            rule->expected[0].data_class = data_class;
-            rule->expected[0].data_idx = data_id;
+            rule->expected[0].idx_cluster = data_cluster;
+            rule->expected[0].idx_class = data_class;
             rule->expected[0].op = op;
         } else {
-            rule->lits[count].data_class = data_class;
-            rule->lits[count].data_idx = data_id;
+            rule->lits[count].idx_cluster = data_cluster;
+            rule->lits[count].idx_class = data_class;
             rule->lits[count].op = op;
         }
     }
@@ -203,27 +203,30 @@ void rule_forward(Array dest, Fuzzy* fs[], Array* ms, Rule* rule[], size_t rule_
     printf("\n");
     for (size_t i = 0; i < rule_count; i++) {
         Rule* rl = rule[i];
+        RuleLit expected = rl->expected[0];
 
         double act = 0;
         enum RuleOp current_op;
 
         printf("%2zu: ", i + 1);
         for (size_t j = 0; j < rl->count; j++) {
-            size_t data_id = rl->lits[j].data_idx;
-            size_t data_class = rl->lits[j].data_class;
+            size_t idx_class = rl->lits[j].idx_class;
+            size_t idx_cluster = rl->lits[j].idx_cluster;
             size_t op = rl->lits[j].op;
-            if (j == 0) {
-                act = ms[data_id].items[data_class];
-            } else if (current_op == R_AND && ms[data_id].items[data_class] < act) {
-                act = ms[data_id].items[data_class];
-            } else if (current_op == R_OR && ms[data_id].items[data_class] > act) {
-                act = ms[data_id].items[data_class];
+
+            double val = ms[idx_class].items[idx_cluster];
+
+            if (j == 0
+                || (current_op == R_AND && val < act)
+                || (current_op == R_OR && val > act)) {
+                act = val;
             }
+
             current_op = op;
-            printf("%zu %s (%.2f) %s ", data_id, fs[data_id]->mfs[data_class].name, ms[data_id].items[data_class], rule_op_cstr[op]);
+            printf("%zu %s (%.2f) %s ", idx_class, fs[idx_class]->mfs[idx_cluster].name, val, rule_op_cstr[op]);
         }
-        dest.items[rl->expected[0].data_class] = fmax(dest.items[rl->expected[0].data_class], act);
-        printf("%zu %s (%.2f)\n", rl->expected[0].data_idx, fs[rl->expected[0].data_idx]->mfs[rl->expected[0].data_class].name, act);
+        dest.items[expected.idx_cluster] = fmax(dest.items[expected.idx_cluster], act);
+        printf("%zu %s (%.2f)\n", expected.idx_class, fs[expected.idx_class]->mfs[expected.idx_cluster].name, act);
     }
     printf("=============\n");
 }

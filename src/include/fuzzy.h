@@ -66,14 +66,6 @@ enum RuleOp {
     R_STOP,
 };
 
-enum RuleClass {
-    R_0,
-    R_1,
-    R_2,
-    R_3,
-    R_4,
-};
-
 static const char* rule_op_cstr[] = {
     "=",
     "&",
@@ -82,8 +74,8 @@ static const char* rule_op_cstr[] = {
 };
 
 typedef struct {
-    size_t data_idx;
-    enum RuleClass data_class;
+    size_t idx_class;
+    size_t idx_cluster;
     enum RuleOp op;
 } RuleLit;
 
@@ -93,8 +85,8 @@ typedef struct {
     RuleLit lits[];
 } Rule;
 
-#define rule_lit(data_class, data_id, op) \
-    (size_t)data_class, (size_t)data_id, (size_t)op
+#define rule_lit(idx_cluster, idx_class, op) \
+    (size_t)idx_cluster, (size_t)idx_class, (size_t)op
 
 Rule* rule_alloc(size_t lit_count, ...);
 void rule_forward(Array dest, Fuzzy* fs[], Array* ms, Rule* rule[], size_t rule_count);
