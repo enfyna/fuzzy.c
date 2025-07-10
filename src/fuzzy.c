@@ -134,7 +134,7 @@ double fuzzy_defuzzify(Fuzzy* fz, Array weights)
 
     double point_pos = 0.0; // riemann sum
     for (size_t i = 0; i < 1000; i++) {
-        double normal = lerpf(fz->bounds[0], fz->bounds[1], point_pos);
+        double normal = lerp_fz(fz, point_pos);
         fuzzy_forward(dest, fz, normal);
         double m = 0.0;
         for (size_t j = 0; j < dest.count; j++) {
@@ -151,7 +151,7 @@ double fuzzy_defuzzify(Fuzzy* fz, Array weights)
         fz->mfs[i].weight = 1.0;
     }
 
-    double result = lerpf(fz->bounds[0], fz->bounds[1], result_top / result_bot);
+    double result = lerp_fz(fz, result_top / result_bot);
     return result;
 }
 
