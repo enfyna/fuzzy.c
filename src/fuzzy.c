@@ -60,12 +60,13 @@ double mf_gauss(MF mf, double value)
     return fmin(mf.weight, exp(t / (2 * s2)));
 }
 
-Fuzzy* fuzzy_alloc_null(size_t class_count, double bound_min, double bound_max, ...)
+Fuzzy* fuzzy_alloc_null(const char* name, size_t class_count, double bound_min, double bound_max, ...)
 {
     assert(class_count > 0);
     assert(bound_min < bound_max);
 
     Fuzzy* fz = malloc(sizeof(Fuzzy) + sizeof(*fz->mfs) * class_count);
+    fz->name = name;
     fz->count = class_count;
     fz->bounds[0] = bound_min;
     fz->bounds[1] = bound_max;
@@ -200,7 +201,7 @@ void rule_forward(Array dest, Fuzzy* fs[], Array* ms, Rule* rule[], size_t rule_
 {
     memset(dest.items, 0, sizeof(double) * dest.count);
 
-    printf("\n");
+    logging("\n");
     for (size_t i = 0; i < rule_count; i++) {
         Rule* rl = rule[i];
         RuleLit expected = rl->expected[0];
@@ -208,12 +209,13 @@ void rule_forward(Array dest, Fuzzy* fs[], Array* ms, Rule* rule[], size_t rule_
         double act = 0;
         enum RuleOp current_op;
 
-        printf("%2zu: ", i + 1);
+        logging("%2zu: if ", i + 1);
         for (size_t j = 0; j < rl->count; j++) {
             size_t idx_class = rl->lits[j].idx_class;
             size_t idx_cluster = rl->lits[j].idx_cluster;
             size_t op = rl->lits[j].op;
 
+            assert(idx_cluster < ms[idx_class].count);
             double val = ms[idx_class].items[idx_cluster];
 
             if (j == 0
@@ -223,10 +225,10 @@ void rule_forward(Array dest, Fuzzy* fs[], Array* ms, Rule* rule[], size_t rule_
             }
 
             current_op = op;
-            printf("%zu %s (%.2f) %s ", idx_class, fs[idx_class]->mfs[idx_cluster].name, val, rule_op_cstr[op]);
+            logging("%s is %s(%.2f) %s ", fs[idx_class]->name, fs[idx_class]->mfs[idx_cluster].name, val, rule_op_cstr[op]);
         }
         dest.items[expected.idx_cluster] = fmax(dest.items[expected.idx_cluster], act);
-        printf("%zu %s (%.2f)\n", expected.idx_class, fs[expected.idx_class]->mfs[expected.idx_cluster].name, act);
+        logging("%s is %s(%.2f)\n", fs[expected.idx_class]->name, fs[expected.idx_class]->mfs[expected.idx_cluster].name, act);
     }
-    printf("=============\n");
+    logging("=============\n");
 }

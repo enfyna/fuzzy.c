@@ -7,6 +7,12 @@
 
 #define MF_MAX_ARGS 4
 
+#ifndef FZ_NO_LOGS
+#define logging printf
+#else
+#define logging(...) ((void)0)
+#endif
+
 struct MF;
 typedef double (*mf)(struct MF, double);
 
@@ -21,6 +27,7 @@ typedef struct MF {
 #define mf_forward(mf, value) (mf).forward((mf), value)
 
 typedef struct {
+    const char* name;
     double bounds[2];
     size_t count;
     MF mfs[];
@@ -37,10 +44,10 @@ double denorm(double min, double max, double val);
 #define fz_gauss(name, c, s) (mf) mf_gauss, name, (double)c, (double)s
 #define fz_trimf(name, a, b, c) (mf) mf_trimf, name, (double)a, (double)b, (double)c
 #define fz_trapmf(name, a, b, c, d) (mf) mf_trapmf, name, (double)a, (double)b, (double)c, (double)d
-#define fuzzy_alloc(class_count, start, end, ...) \
-    fuzzy_alloc_null((size_t)class_count, (double)start, (double)end, __VA_ARGS__, NULL)
+#define fuzzy_alloc(name, class_count, start, end, ...) \
+    fuzzy_alloc_null((const char*)name, (size_t)class_count, (double)start, (double)end, __VA_ARGS__, NULL)
 
-Fuzzy* fuzzy_alloc_null(size_t class_count, double bound_bot, double bound_top, ...);
+Fuzzy* fuzzy_alloc_null(const char* name, size_t class_count, double bound_bot, double bound_top, ...);
 void fuzzy_forward(Array dest, Fuzzy* fz, double value);
 double fuzzy_defuzzify(Fuzzy* fz, Array weights);
 
@@ -67,9 +74,9 @@ enum RuleOp {
 };
 
 static const char* rule_op_cstr[] = {
-    "=",
-    "&",
-    "|",
+    "then",
+    "and",
+    "or",
     ".",
 };
 

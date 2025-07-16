@@ -21,20 +21,17 @@ int main(void)
     assert(read_data == csv->data_count);
 
     Fuzzy* fs[] = {
-        // service
-        fuzzy_alloc(3, 0, 10,
-            fz_gauss("bad", 0, 2),
-            fz_gauss("med", 5, 2),
-            fz_gauss("good", 10, 2)),
-        // food
-        fuzzy_alloc(2, 0, 10,
-            fz_trapmf("terrible", 0, 0, 1, 3),
-            fz_trapmf("delicious", 7, 9, 10, 10)),
-        // tip
-        fuzzy_alloc(3, 0, 30,
-            fz_trimf("low", 0, 5, 10),
-            fz_trimf("med", 10, 15, 20),
-            fz_trimf("high", 20, 25, 30))
+        fuzzy_alloc("Service", 3, 0, 10,
+            fz_gauss("Bad", 0, 2),
+            fz_gauss("Average", 5, 2),
+            fz_gauss("Good", 10, 2)),
+        fuzzy_alloc("Food", 2, 0, 10,
+            fz_trapmf("Terrible", 0, 0, 1, 3),
+            fz_trapmf("Delicious", 7, 9, 10, 10)),
+        fuzzy_alloc("Tip", 3, 0, 30,
+            fz_trimf("Low", 0, 5, 10),
+            fz_trimf("Average", 10, 15, 20),
+            fz_trimf("High", 20, 25, 30))
     };
     enum { fs_count = sizeof fs / sizeof fs[0] };
 
@@ -77,7 +74,7 @@ int main(void)
 
         printf("data %zu: ", line + 1);
         for (size_t i = 0; i < fs_count - 1; i++) {
-            printf(" %s(%.2f), ", csv->titles[i], csv->datas[line][i]);
+            printf(" %s(%.2f), ", fs[i]->name, csv->datas[line][i]);
         }
         printf("\n");
 
@@ -85,7 +82,7 @@ int main(void)
             ms[class].count = fs[class]->count;
             fuzzy_forward(ms[class], fs[class], csv->datas[line][class]);
 
-            printf("%s:\n\t", csv->titles[class]);
+            printf("%s:\n\t", fs[class]->name);
             for (size_t j = 0; j < ms[class].count; j++) {
                 printf("%.2f, ", ms[class].items[j]);
             }

@@ -25,36 +25,31 @@ int main(void)
     assert(read_data == csv->data_count);
 
     Fuzzy* fs[] = {
-        // data_anchor_ratio
-        fuzzy_alloc(5, 10.0, 30.0,
+        fuzzy_alloc("Anchor Ratio", 5, 10.0, 30.0,
             fz_trimf("very low", 10, 10, 25),
             fz_trimf("low", 10, 20, 30),
             fz_trimf("med", 10, 20, 30),
             fz_trimf("high", 10, 20, 30),
             fz_trimf("very high", 25, 30, 31)),
-        // data_trans_range
-        fuzzy_alloc(5, 15.0, 25.0,
+        fuzzy_alloc("Trans Range", 5, 15.0, 25.0,
             fz_gauss("very low", 15, 1),
             fz_gauss("low", 18, 1),
             fz_gauss("med", 20, 1),
             fz_gauss("high", 22, 1),
             fz_gauss("very high", 25, 1)),
-        // data_node_density
-        fuzzy_alloc(5, 100.0, 300.0,
+        fuzzy_alloc("Node Density", 5, 100.0, 300.0,
             fz_gauss("very low", 100, 25),
             fz_gauss("low", 150, 25),
             fz_gauss("med", 200, 25),
             fz_gauss("high", 250, 25),
             fz_gauss("very high", 300, 25)),
-        // data_iterations
-        fuzzy_alloc(5, 15.0, 100.0,
+        fuzzy_alloc("Iterations", 5, 15.0, 100.0,
             fz_gauss("very low", 15, 10),
             fz_gauss("low", 30, 10),
             fz_gauss("med", 50, 10),
             fz_gauss("high", 70, 10),
             fz_gauss("very high", 100, 10)),
-        // data_ale
-        fuzzy_alloc(3, 0.0, 3.0,
+        fuzzy_alloc("ALE", 3, 0.0, 3.0,
             fz_gauss("low", 0, 0.5),
             fz_gauss("med", 1, 0.5),
             fz_gauss("high", 2, 0.5))
