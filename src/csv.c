@@ -12,16 +12,22 @@
 void csv_print(Csv* csv)
 {
     assert(csv != NULL);
+    for (size_t i = 0; i < csv->title_count; i++) {
+        printf("%7s", csv->titles[i]);
+        if (i < csv->title_count - 1) {
+            printf(", ");
+        }
+    }
+    printf("\n");
     for (size_t i = 0; i < csv->data_count; i++) {
         for (size_t j = 0; j < csv->title_count; j++) {
-            printf("%zu|%zu: %lf\n", i, j, csv->datas[i][j]);
+            printf("% 7.2lf", csv->datas[i][j]);
+            if (j < csv->title_count - 1) {
+                printf(", ");
+            }
         }
         printf("\n");
     }
-    for (size_t i = 0; i < csv->title_count; i++) {
-        printf("%s, ", csv->titles[i]);
-    }
-    printf("\n");
 }
 
 static size_t csv_count_title(FILE* fp)
