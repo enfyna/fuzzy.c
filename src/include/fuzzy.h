@@ -33,6 +33,9 @@ typedef struct {
     MF mfs[];
 } Fuzzy;
 
+#define fz_min(f) (f)->bounds[0]
+#define fz_max(f) (f)->bounds[1]
+
 typedef struct {
     size_t count;
     double* items;
@@ -40,6 +43,11 @@ typedef struct {
 
 double norm(double min, double max, double val);
 double denorm(double min, double max, double val);
+double lerp(double min, double max, double val);
+
+#define fz_norm(f, val) norm(fz_min(f), fz_max(f), val)
+#define fz_denorm(f, val) denorm(fz_min(f), fz_max(f), val)
+#define fz_lerp(f, val) lerp(fz_min(f), fz_max(f), val)
 
 #define fz_gauss(name, c, s) (mf) mf_gauss, name, (double)c, (double)s
 #define fz_trimf(name, a, b, c) (mf) mf_trimf, name, (double)a, (double)b, (double)c

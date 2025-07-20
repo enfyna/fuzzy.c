@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "helper.h"
 #include "raylib.h"
 
 #include "csv.h"
@@ -94,7 +93,7 @@ int main(void)
             ms[class].count = fs[class]->count;
             fuzzy_forward(ms[class], fs[class], csv->datas[line][class]);
 
-            printf("%s:\n\t", csv->titles[class]);
+            printf("%s:\n\t", fs[class]->name);
             for (size_t j = 0; j < ms[class].count; j++) {
                 printf("%.2f, ", ms[class].items[j]);
             }
@@ -159,7 +158,7 @@ int main(void)
         double point_pos = 0;
         for (int j = 0; j < line_point_count; j++) {
             m.count = fs[i]->count;
-            fuzzy_forward(m, fs[i], lerp_fz(fs[i], point_pos));
+            fuzzy_forward(m, fs[i], fz_lerp(fs[i], point_pos));
             for (size_t k = 0; k < m.count; k++) {
                 buf_line[k]->points[j] = (Vector2) {
                     point_pos, m.items[k] + (i * 2)
@@ -181,10 +180,10 @@ int main(void)
             double point_pos = 0;
             fs[data_tip]->mfs[i].weight = res[line].items[i];
             for (size_t j = 0; j < line_point_count; j++) {
-                double p = mf_forward(fs[data_tip]->mfs[i], lerp_fz(fs[data_tip], point_pos));
+                double p = mf_forward(fs[data_tip]->mfs[i], fz_lerp(fs[data_tip], point_pos));
                 l->points[j] = (Vector2) { .x = point_pos + line, .y = p };
-                double res = norm(fs[data_tip]->bounds[0], fs[data_tip]->bounds[1], results[line]);
-                double actual = norm(fs[data_tip]->bounds[0], fs[data_tip]->bounds[1], csv->datas[line][data_tip]);
+                double res = fz_norm(fs[data_tip], results[line]);
+                double actual = fz_norm(fs[data_tip], csv->datas[line][data_tip]);
                 r->points[j] = (Vector2) { .x = res + line, .y = 2 * point_pos - 0.2 };
                 a->points[j] = (Vector2) { .x = actual + line, .y = 2 * point_pos - 0.2 };
                 point_pos += 0.01;

@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "helper.h"
 #include "raylib.h"
 
 #include "csv.h"
@@ -269,7 +268,7 @@ int main(void)
         double point_pos = 0;
         for (int j = 0; j < line_point_count; j++) {
             m.count = fs[i]->count;
-            fuzzy_forward(m, fs[i], lerp_fz(fs[i], point_pos));
+            fuzzy_forward(m, fs[i], fz_lerp(fs[i], point_pos));
             for (size_t k = 0; k < m.count; k++) {
                 buf_line[k]->points[j] = (Vector2) {
                     point_pos, m.items[k] + (i * 2)
@@ -291,10 +290,10 @@ int main(void)
             double point_pos = 0;
             fs[data_ale]->mfs[i].weight = res[line].items[i];
             for (size_t j = 0; j < line_point_count; j++) {
-                double p = mf_forward(fs[data_ale]->mfs[i], lerp_fz(fs[data_ale], point_pos));
+                double p = mf_forward(fs[data_ale]->mfs[i], fz_lerp(fs[data_ale], point_pos));
                 l->points[j] = (Vector2) { .x = point_pos + line, .y = p };
-                double res = (results[line] - fs[data_ale]->bounds[0]) / (fs[data_ale]->bounds[1] - fs[data_ale]->bounds[0]);
-                double actual = (csv->datas[line][data_ale] - fs[data_ale]->bounds[0]) / (fs[data_ale]->bounds[1] - fs[data_ale]->bounds[0]);
+                double res = (results[line] - fz_min(fs[data_ale]) / (fz_max(fs[data_ale]) - fz_min(fs[data_ale])));
+                double actual = (csv->datas[line][data_ale] - fz_min(fs[data_ale])) / (fz_max(fs[data_ale]) - fz_min(fs[data_ale]));
                 r->points[j] = (Vector2) { .x = res + line, .y = 2 * point_pos - 0.2 };
                 a->points[j] = (Vector2) { .x = actual + line, .y = 2 * point_pos - 0.2 };
                 point_pos += 0.01;

@@ -7,7 +7,6 @@
 #include <string.h>
 
 #include "fuzzy.h"
-#include "helper.h"
 
 double norm(double min, double max, double val)
 {
@@ -17,6 +16,12 @@ double norm(double min, double max, double val)
 double denorm(double min, double max, double val)
 {
     return val * (max - min) + min;
+}
+
+double lerp(double min, double max, double v)
+
+{
+    return (max - min) * v + min;
 }
 
 // https://www.mathworks.com/help/fuzzy/trapezoidalmf.html
@@ -68,8 +73,8 @@ Fuzzy* fuzzy_alloc_null(const char* name, size_t class_count, double bound_min, 
     Fuzzy* fz = malloc(sizeof(Fuzzy) + sizeof(*fz->mfs) * class_count);
     fz->name = name;
     fz->count = class_count;
-    fz->bounds[0] = bound_min;
-    fz->bounds[1] = bound_max;
+    fz_min(fz) = bound_min;
+    fz_max(fz) = bound_max;
 
     va_list ap;
 
@@ -135,7 +140,7 @@ double fuzzy_defuzzify(Fuzzy* fz, Array weights)
 
     double point_pos = 0.0; // riemann sum
     for (size_t i = 0; i < 1000; i++) {
-        double normal = lerp_fz(fz, point_pos);
+        double normal = fz_lerp(fz, point_pos);
         fuzzy_forward(dest, fz, normal);
         double m = 0.0;
         for (size_t j = 0; j < dest.count; j++) {
@@ -152,7 +157,7 @@ double fuzzy_defuzzify(Fuzzy* fz, Array weights)
         fz->mfs[i].weight = 1.0;
     }
 
-    double result = lerp_fz(fz, result_top / result_bot);
+    double result = fz_lerp(fz, result_top / result_bot);
     return result;
 }
 
