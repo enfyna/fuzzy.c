@@ -65,7 +65,7 @@ double mf_gauss(MF mf, double value)
     return fmin(mf.weight, exp(t / (2 * s2)));
 }
 
-Fuzzy* fuzzy_alloc_null(const char* name, size_t class_count, double bound_min, double bound_max, ...)
+Fuzzy* fuzzy_alloc_null(const char* name, enum FuzzyType type, size_t class_count, double bound_min, double bound_max, ...)
 {
     assert(class_count > 0);
     assert(bound_min < bound_max);
@@ -73,6 +73,7 @@ Fuzzy* fuzzy_alloc_null(const char* name, size_t class_count, double bound_min, 
     Fuzzy* fz = malloc(sizeof(Fuzzy) + sizeof(*fz->mfs) * class_count);
     fz->name = name;
     fz->count = class_count;
+    fz->type = type;
     fz_min(fz) = bound_min;
     fz_max(fz) = bound_max;
 
@@ -88,6 +89,9 @@ Fuzzy* fuzzy_alloc_null(const char* name, size_t class_count, double bound_min, 
         fz->mfs[count].forward = f;
         fz->mfs[count].weight = 1.0;
         fz->mfs[count].name = va_arg(ap, const char*);
+        if (type == FZ_SUGENO) {
+            fz->mfs[count].scoef = va_arg(ap, double);
+        }
         if (f == mf_trimf) {
             fz->mfs[count].args_count = 3;
             fz->mfs[count].args[0] = va_arg(ap, double);
@@ -104,6 +108,11 @@ Fuzzy* fuzzy_alloc_null(const char* name, size_t class_count, double bound_min, 
             fz->mfs[count].args[0] = va_arg(ap, double);
             fz->mfs[count].args[1] = va_arg(ap, double);
         } else {
+            if (type == FZ_SUGENO) {
+                fprintf(stderr,
+                    "[ERROR] To create clusters for sugeno you need to use "
+                    "the sugeno macros like : fz_trimf_sugeno()\n");
+            }
             assert(false && "MF type undefined!");
         }
         count++;
@@ -124,7 +133,7 @@ void fuzzy_forward(Array dest, Fuzzy* fz, double value)
     }
 }
 
-double fuzzy_defuzzify(Fuzzy* fz, Array weights)
+double defuzz_centroid(Fuzzy* fz, Array weights)
 {
     double result_top = 0;
     double result_bot = 0;
@@ -161,12 +170,23 @@ double fuzzy_defuzzify(Fuzzy* fz, Array weights)
     return result;
 }
 
-Rule* rule_alloc(size_t lit_count, ...)
+Rule* rule_alloc(enum FuzzyType type, size_t lit_count, ...)
 {
-    assert(lit_count > 1);
+    size_t ptr_size = sizeof(Rule);
 
-    Rule* rule = malloc(sizeof(Rule) + sizeof(*rule->lits) * (lit_count - 1));
+    if (type == FZ_MAMDANI) {
+        assert(lit_count > 1);
+        ptr_size += sizeof(RuleLit) * (lit_count - 1);
+    } else if (type == FZ_SUGENO) {
+        assert(lit_count > 0);
+        ptr_size += sizeof(RuleLit) * lit_count;
+    } else {
+        assert(false && "Invalid fuzzy type! [FZ_MAMDANI | FZ_SUGENO]");
+    }
+
+    Rule* rule = calloc(1, ptr_size);
     rule->count = lit_count - 1;
+    rule->type = type;
 
     va_list ap;
 
@@ -178,7 +198,7 @@ Rule* rule_alloc(size_t lit_count, ...)
         if (count == lit_count - 1) {
             assert(op == R_STOP
                 && "[ERROR] Last rule op must be R_STOP!");
-        } else if (count == lit_count - 2) {
+        } else if (type == FZ_MAMDANI && count == lit_count - 2) {
             assert(op == R_EQUALS
                 && "[ERROR] Before last rule op must be R_EQUALS!");
         } else {
@@ -187,7 +207,7 @@ Rule* rule_alloc(size_t lit_count, ...)
             assert(op != R_STOP
                 && "[ERROR] R_STOP must be used only as the last op!");
         }
-        if (count == lit_count - 1) {
+        if (type == FZ_MAMDANI && count == lit_count - 1) {
             rule->expected[0].idx_cluster = data_cluster;
             rule->expected[0].idx_class = data_class;
             rule->expected[0].op = op;
@@ -202,38 +222,86 @@ Rule* rule_alloc(size_t lit_count, ...)
     return rule;
 }
 
-void rule_forward(Array dest, Fuzzy* fs[], Array* ms, Rule* rule[], size_t rule_count)
+void rule_forward(Array dest, Fuzzy* fs[], Array* ms, Rule* rs[], size_t rule_count)
 {
+    if (fs[0]->type == FZ_SUGENO) {
+        assert(dest.count == rule_count);
+    } else if (fs[0]->type == FZ_MAMDANI) {
+        size_t class = rs[0]->expected[0].idx_class;
+        assert(dest.count == fs[class]->count);
+    }
     memset(dest.items, 0, sizeof(double) * dest.count);
 
-    logging("\n");
+    enum FuzzyType type;
+
     for (size_t i = 0; i < rule_count; i++) {
-        Rule* rl = rule[i];
-        RuleLit expected = rl->expected[0];
+        Rule* rule = rs[i];
+
+        if (i == 0) {
+            type = rule->type;
+        } else {
+            assert(type == rule->type && "Dont mix sugeno and mamdani rules!");
+        }
 
         double act = 0;
+
         enum RuleOp current_op;
 
-        logging("%2zu: if ", i + 1);
-        for (size_t j = 0; j < rl->count; j++) {
-            size_t idx_class = rl->lits[j].idx_class;
-            size_t idx_cluster = rl->lits[j].idx_cluster;
-            size_t op = rl->lits[j].op;
+        if (fs[0]->type == FZ_MAMDANI) {
 
-            assert(idx_cluster < ms[idx_class].count);
-            double val = ms[idx_class].items[idx_cluster];
+            logging("%2zu: if ", i + 1);
+            for (size_t j = 0; j < rule->count; j++) {
+                size_t idx_class = rule->lits[j].idx_class;
+                size_t idx_cluster = rule->lits[j].idx_cluster;
+                size_t op = rule->lits[j].op;
 
-            if (j == 0
-                || (current_op == R_AND && val < act)
-                || (current_op == R_OR && val > act)) {
-                act = val;
+                assert(idx_cluster < ms[idx_class].count);
+                double val = ms[idx_class].items[idx_cluster];
+
+                if (j == 0
+                    || (current_op == R_AND && val < act)
+                    || (current_op == R_OR && val > act)) {
+                    act = val;
+                }
+
+                current_op = op;
+                logging("%s is %s(%.2f) %s ", fs[idx_class]->name, fs[idx_class]->mfs[idx_cluster].name, val, rule_op_cstr[op]);
             }
 
-            current_op = op;
-            logging("%s is %s(%.2f) %s ", fs[idx_class]->name, fs[idx_class]->mfs[idx_cluster].name, val, rule_op_cstr[op]);
+            RuleLit expected = rule->expected[0];
+            dest.items[expected.idx_cluster] = fmax(dest.items[expected.idx_cluster], act);
+            logging("%s is %s(%.2f)\n", fs[expected.idx_class]->name, fs[expected.idx_class]->mfs[expected.idx_cluster].name, act);
+
+        } else if (fs[0]->type == FZ_SUGENO) {
+            logging("R%zu: \n  w%zu = ", i + 1, i + 1);
+
+            for (size_t j = 0; j <= rule->count; j++) {
+                size_t idx_class = rule->lits[j].idx_class;
+                size_t idx_cluster = rule->lits[j].idx_cluster;
+                size_t op = rule->lits[j].op;
+
+                assert(idx_cluster < ms[idx_class].count);
+                double val = ms[idx_class].items[idx_cluster];
+
+                if (j == 0) {
+                    act = val;
+                } else if (current_op == R_AND) {
+                    act *= val;
+                } else if (current_op == R_OR) {
+                    act = act + val - (act * val); // probabilistic or
+                }
+
+                current_op = op;
+                logging("%s['%s'](%.2f)", fs[idx_class]->name, fs[idx_class]->mfs[idx_cluster].name, val);
+                if (j < rule->count) {
+                    logging(" %s ", rule_op_cstr[current_op]);
+                }
+            }
+            logging(" = %.2lf\n", act);
+            dest.items[i] = act;
+        } else {
+            assert(false && "Invalid fuzzy type! [FZ_MAMDANI | FZ_SUGENO]\n");
         }
-        dest.items[expected.idx_cluster] = fmax(dest.items[expected.idx_cluster], act);
-        logging("%s is %s(%.2f)\n", fs[expected.idx_class]->name, fs[expected.idx_class]->mfs[expected.idx_cluster].name, act);
     }
     logging("=============\n");
 }

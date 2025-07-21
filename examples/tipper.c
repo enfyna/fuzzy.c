@@ -32,14 +32,14 @@ int main(void)
     assert(read_data == csv->data_count);
 
     Rule* rules[] = {
-        rule_alloc(3,
+        rule_alloc(FZ_MAMDANI, 3,
             rule_lit(0, data_service, R_OR),
             rule_lit(0, data_food, R_EQUALS),
             rule_lit(0, data_tip, R_STOP)),
-        rule_alloc(2,
+        rule_alloc(FZ_MAMDANI, 2,
             rule_lit(1, data_service, R_EQUALS),
             rule_lit(1, data_tip, R_STOP)),
-        rule_alloc(3,
+        rule_alloc(FZ_MAMDANI, 3,
             rule_lit(2, data_service, R_OR),
             rule_lit(1, data_food, R_EQUALS),
             rule_lit(2, data_tip, R_STOP)),
@@ -102,7 +102,7 @@ int main(void)
 
         rule_forward(res[line], fs, ms, rules, rules_count);
 
-        double defuzz = fuzzy_defuzzify(fs[data_tip], res[line]);
+        double defuzz = defuzz_centroid(fs[data_tip], res[line]);
         results[line] = defuzz;
 
         printf("res: ");
@@ -120,7 +120,7 @@ int main(void)
         total_diff_mae += diff;
         total_diff_rmse += pow(diff, 2);
 
-        printf("guess ale: %.2f | real ale: %.2f | diff: %.2f\n", results[line],
+        printf("guess: %.2f | real: %.2f | diff: %.2f\n", results[line],
             actual, diff);
         printf("=============\n");
     }
