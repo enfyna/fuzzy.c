@@ -259,7 +259,7 @@ int main(void)
         int line_point_count = 101;
 
         for (size_t j = 0; j < fs[i]->count; j++) {
-            buf_line[j] = line_alloc(&g, line_point_count, fs[i]->mfs[j].name, colors[j]);
+            buf_line[j] = line_alloc(&g, line_point_count, fs[i]->mfs[j].name, colors[j], 2);
         }
 
         double values[fs_count];
@@ -280,11 +280,10 @@ int main(void)
 
     for (size_t line = 0; line < read_data; line++) {
         const size_t line_point_count = 101;
-        Line* r = line_alloc(&gm, line_point_count, "Defuzz", RED);
-        Line* a = line_alloc(&gm, line_point_count, "Actual", GREEN);
+        Line* r = line_alloc(&gm, line_point_count, "Defuzz", RED, 2);
+        Line* a = line_alloc(&gm, line_point_count, "Actual", GREEN, 2);
         for (size_t i = 0; i < fs[data_ale]->count; i++) {
-            Line* l = line_alloc(&gm,
-                line_point_count, fs[data_ale]->mfs[i].name, colors[i]);
+            Line* l = line_alloc(&gm, line_point_count, fs[data_ale]->mfs[i].name, colors[i], 2);
 
             double point_pos = 0;
             fs[data_ale]->mfs[i].weight = res[line].items[i];
@@ -300,14 +299,14 @@ int main(void)
         }
     }
 
-    Line* line_x = line_alloc(&g, 100, "X", MAROON);
-    Line* line_y = line_alloc(&g, 100, "Y", VIOLET);
+    Line* line_x = line_alloc(&g, 100, "X", MAROON, 2);
+    Line* line_y = line_alloc(&g, 100, "Y", VIOLET, 2);
     for (int i = 0; i < 100; i++) {
         line_x->points[i] = (Vector2) { i, 0 };
         line_y->points[i] = (Vector2) { 0, i };
     }
-    line_x = line_alloc(&gm, 100, "X", MAROON);
-    line_y = line_alloc(&gm, 100, "Y", VIOLET);
+    line_x = line_alloc(&gm, 100, "X", MAROON, 2);
+    line_y = line_alloc(&gm, 100, "Y", VIOLET, 2);
     for (int i = 0; i < 100; i++) {
         line_x->points[i] = (Vector2) { i, 0 };
         line_y->points[i] = (Vector2) { 0, i };
@@ -325,11 +324,12 @@ int main(void)
     size_t glist_count = sizeof glist / sizeof glist[0];
 
     while (!WindowShouldClose()) {
+        if (IsKeyPressed(KEY_Q)) {
+            break;
+        }
+
         BeginDrawing();
         ClearBackground(DARKGRAY);
-
-        double delta = GetFrameTime();
-        Vector2 mpos = GetMousePosition();
 
         for (size_t i = 0; i < glist_count; i++) {
             Graph* gp = glist[i];
@@ -344,7 +344,7 @@ int main(void)
                 };
             }
 
-            graph_update(gp, mpos, delta);
+            graph_update(gp);
 
             graph_draw(gp);
         }

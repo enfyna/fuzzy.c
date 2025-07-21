@@ -59,18 +59,18 @@ int main(void)
 {
 
     Fuzzy* cs[] = {
-        fuzzy_mamdani_alloc("distance", 4, 0, 2.2,
+        fuzzy_alloc("distance", 4, 0, 2.2,
             fz_trimf("very near", 0, 0, 0.8),
             fz_trimf("near", 0, 0.8, 1.5),
             fz_trimf("far", 0.8, 1.5, 2.2),
             fz_trapmf("very far", 1.5, 2.2, 100, 101)),
-        fuzzy_mamdani_alloc("angle", 5, -90, 90,
+        fuzzy_alloc("angle", 5, -90, 90,
             fz_trapmf("left", -100, -100, -90, -45),
             fz_trimf("ahead left", -90, -45, 0),
             fz_trimf("ahead", -45, 0, 45),
             fz_trimf("ahead right", 0, 45, 90),
             fz_trapmf("right", 45, 90, 100, 100)),
-        fuzzy_mamdani_alloc("deviation", 5, -90, 90,
+        fuzzy_alloc("deviation", 5, -90, 90,
             fz_trapmf("left", -100, -100, -90, -45),
             fz_trimf("ahead left", -90, -45, 0),
             fz_trimf("ahead", -45, 0, 45),
@@ -173,9 +173,7 @@ int main(void)
     InitWindow(800, 800, "Mobile Robot");
     printf("seed: %ld\n", seed);
 
-    Rectangle room = (Rectangle) {
-        .x = 100, .y = 100, .height = 600, .width = 600
-    };
+    Rectangle room = { .x = 100, .y = 100, .height = 600, .width = 600 };
 
     Robot rs[] = {
         { .size = 16, .speed = { 100, 100 }, .pos = vec2_rand(200, 600) },
@@ -209,7 +207,7 @@ int main(void)
 
         for (size_t j = 0; j < cs[i]->count; j++) {
             buf_line[j] = line_alloc(&g,
-                line_point_count, cs[i]->mfs[j].name, RED);
+                line_point_count, cs[i]->mfs[j].name, RED, 3);
         }
 
         double values[10];
@@ -352,11 +350,10 @@ int main(void)
         if (IsKeyPressed(KEY_G))
             graph_enabled = !graph_enabled;
         if (graph_enabled) {
-            Vector2 mpos = GetMousePosition();
             g.bound = (Rectangle) {
                 GetScreenWidth() / 2.0 + 10, 10, GetScreenWidth() / 2.0 - 20, GetScreenHeight() - 20
             };
-            graph_update(&g, mpos, delta);
+            graph_update(&g);
             graph_draw(&g);
         }
 
