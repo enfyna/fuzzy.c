@@ -135,7 +135,7 @@ int main(void)
 
     SetTargetFPS(144);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(1900, 1000, "mamdani");
+    InitWindow(1200, 600, "Tipper");
 
     Graph g = graph(1, RED, BLACK, DARKGRAY);
     g.show_legend = false;
@@ -202,12 +202,12 @@ int main(void)
         line_y->points[i] = (Vector2) { 0, i };
     }
 
-    g.st_reset.pos = (Vector2) { 430, 270 };
-    g.st_reset.scale = (Vector3) { 1, 1, 90 };
+    g.st_reset.pos = (Vector2) { .x = 232.00, .y = 10.00 };
+    g.st_reset.scale = (Vector3) { .x = 1.00, .y = 1.00, .z = 110.05 };
     g.st_current = g.st_reset;
 
-    gm.st_reset.pos = (Vector2) { 205, 320 };
-    gm.st_reset.scale = (Vector3) { 1, 1, 112 };
+    gm.st_reset.pos = (Vector2) { .x = 126.00, .y = 121.00 };
+    gm.st_reset.scale = (Vector3) { .x = 1.00, .y = 1.00, .z = 110.05 };
     gm.st_current = gm.st_reset;
 
     Graph* glist[] = { &g, &gm };
@@ -244,8 +244,9 @@ int main(void)
 
     CloseWindow();
 
-    graph_free(&g);
-    graph_free(&gm);
+    for (size_t i = 0; i < glist_count; i++) {
+        graph_free(glist[i]);
+    }
 
     for (size_t i = 0; i < fs_count; i++) {
         free(fs[i]);

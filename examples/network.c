@@ -245,7 +245,7 @@ int main(void)
 
     SetTargetFPS(144);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(1900, 1000, "mamdani");
+    InitWindow(1900, 1000, "Network");
 
     Graph g = graph(1, RED, BLACK, DARKGRAY);
     g.show_legend = false;
