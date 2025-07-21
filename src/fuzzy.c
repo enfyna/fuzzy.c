@@ -143,9 +143,10 @@ double defuzz_centroid(Fuzzy* fz, Array weights)
         fz->mfs[i].weight = weights.items[i];
     }
 
+    double dest_items[fz->count];
     Array dest = { 0 };
     dest.count = fz->count;
-    dest.items = calloc(fz->count, sizeof(double));
+    dest.items = dest_items;
 
     double point_pos = 0.0; // riemann sum
     for (size_t i = 0; i < 1000; i++) {

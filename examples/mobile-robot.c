@@ -198,7 +198,7 @@ int main(void)
     Graph g = graph(10, DARKGRAY, BLACK, WHITE);
     g.show_legend = false;
 
-    g.st_reset.pos = (Vector2) { 430, 270 };
+    g.st_reset.pos = (Vector2) { 165, 195 };
     g.st_reset.scale = (Vector3) { 1, 1, 90 };
     g.st_current = g.st_reset;
 
@@ -207,10 +207,9 @@ int main(void)
 
         int line_point_count = 101;
 
-        char buf[256] = { 0 };
         for (size_t j = 0; j < cs[i]->count; j++) {
-            snprintf(buf, 256, "%s", cs[i]->mfs[j].name);
-            buf_line[j] = line_alloc(&g, line_point_count, strdup(buf), RED);
+            buf_line[j] = line_alloc(&g,
+                line_point_count, cs[i]->mfs[j].name, RED);
         }
 
         double values[10];
@@ -231,18 +230,18 @@ int main(void)
 
     bool graph_enabled = false;
 
+    double ms_items[fs_count][10];
     Array ms[fs_count];
     for (size_t i = 0; i < fs_count; i++) {
         ms[i].count = cs[i]->count;
-        ms[i].items = malloc(sizeof(double) * cs[i]->count);
+        ms[i].items = ms_items[i];
     }
 
-    Array res;
-    double res_items[10] = { 0 };
-    for (size_t i = 0; i < 1; i++) {
-        res.count = cs[data_deviation]->count;
-        res.items = res_items;
-    }
+    double res_items[cs[data_deviation]->count];
+    Array res = {
+        .items = res_items,
+        .count = cs[data_deviation]->count,
+    };
 
     bool calculate = true;
 
@@ -371,6 +370,8 @@ int main(void)
     for (size_t i = 0; i < fs_count; i++) {
         free(cs[i]);
     }
+
+    graph_free(&g);
 
     CloseWindow();
 

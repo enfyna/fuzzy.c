@@ -62,16 +62,18 @@ int main(void)
     enum { fs_count = sizeof fs / sizeof fs[0] };
 
     // Memberships
+    double ms_items[fs_count][fs[fs_count - 1]->count + 1];
     Array ms[fs_count];
     for (size_t i = 0; i < fs_count; i++) {
         ms[i].count = fs[fs_count - 1]->count + 1;
-        ms[i].items = malloc(sizeof(double) * (fs[fs_count - 1]->count + 1));
+        ms[i].items = ms_items[i];
     }
 
+    double res_items[read_data][fs[data_tip]->count];
     Array res[read_data];
     for (size_t i = 0; i < read_data; i++) {
         res[i].count = fs[data_tip]->count;
-        res[i].items = malloc(sizeof(double) * fs[data_tip]->count);
+        res[i].items = res_items[i];
     }
 
     double results[read_data] = { 0 };
@@ -146,10 +148,9 @@ int main(void)
 
         int line_point_count = 101;
 
-        char buf[256] = { 0 };
         for (size_t j = 0; j < fs[i]->count; j++) {
-            snprintf(buf, 256, "%s:%s", csv->titles[i], fs[i]->mfs[j].name);
-            buf_line[j] = line_alloc(&g, line_point_count, strdup(buf), colors[j]);
+            buf_line[j] = line_alloc(&g,
+                line_point_count, fs[i]->mfs[j].name, colors[j]);
         }
 
         double values[fs_count];
@@ -173,9 +174,8 @@ int main(void)
         Line* r = line_alloc(&gm, line_point_count, "Defuzz", RED);
         Line* a = line_alloc(&gm, line_point_count, "Actual", GREEN);
         for (size_t i = 0; i < fs[data_tip]->count; i++) {
-            char buf[256] = { 0 };
-            snprintf(buf, 256, "%s:%s", csv->titles[data_tip], fs[data_tip]->mfs[i].name);
-            Line* l = line_alloc(&gm, line_point_count, strdup(buf), colors[i]);
+            Line* l = line_alloc(&gm,
+                line_point_count, fs[data_tip]->mfs[i].name, colors[i]);
 
             double point_pos = 0;
             fs[data_tip]->mfs[i].weight = res[line].items[i];
@@ -243,10 +243,20 @@ int main(void)
         EndDrawing();
     }
 
+    CloseWindow();
+
     graph_free(&g);
     graph_free(&gm);
 
-    CloseWindow();
+    for (size_t i = 0; i < fs_count; i++) {
+        free(fs[i]);
+    }
+
+    for (size_t i = 0; i < rules_count; i++) {
+        free(rules[i]);
+    }
+
+    csv_free(csv);
 
     return 0;
 }

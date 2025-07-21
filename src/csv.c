@@ -115,3 +115,20 @@ Csv* csv_alloc_read_file_until(const char* csv_name, size_t max_read_line_data)
     fclose(f);
     return c;
 }
+
+void csv_free(Csv* csv)
+{
+    for (size_t i = 0; i < csv->data_count; i++) {
+        free(csv->datas[i]);
+    }
+
+    for (size_t i = 0; i < csv->title_count; i++) {
+        free(csv->titles[i]);
+    }
+
+    free(csv->datas);
+    free(csv->titles);
+    free(csv);
+
+    csv = NULL;
+}
